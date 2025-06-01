@@ -264,9 +264,9 @@ public class MTIVideoComposition {
             }
         }
         
-        let sourcePixelBufferAttributes: [String : Any]? = [kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarFullRange, kCVPixelFormatType_32BGRA, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]]
+        let sourcePixelBufferAttributes: [String : any Sendable]? = [kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarFullRange, kCVPixelFormatType_32BGRA, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]]
         
-        let requiredPixelBufferAttributesForRenderContext: [String : Any] = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        let requiredPixelBufferAttributesForRenderContext: [String : any Sendable] = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         
         private var pendingRequests: Set<VideoCompositionRequest> = []
         private let pendingRequestsLock = MTILockCreate()
@@ -362,18 +362,13 @@ public class MTIVideoComposition {
         videoComposition = AVMutableVideoComposition(propertiesOf: asset)
         let videoTracks = asset.tracks(withMediaType: .video)
         
-        /// AVMutableVideoComposition's renderSize property is buggy with some assets. Calculate the renderSize here based on the documentation of `AVMutableVideoComposition(propertiesOf:)`
-        if let composition = asset as? AVComposition {
-            videoComposition.renderSize = composition.naturalSize
-        } else {
-            var renderSize: CGSize = .zero
-            for videoTrack in videoTracks {
-                let size = videoTrack.naturalSize.applying(videoTrack.preferredTransform)
-                renderSize.width = max(renderSize.width, abs(size.width))
-                renderSize.height = max(renderSize.height, abs(size.height))
-            }
-            videoComposition.renderSize = renderSize
+        var renderSize: CGSize = .zero
+        for videoTrack in videoTracks {
+            let size = videoTrack.naturalSize.applying(videoTrack.preferredTransform)
+            renderSize.width = max(renderSize.width, abs(size.width))
+            renderSize.height = max(renderSize.height, abs(size.height))
         }
+        videoComposition.renderSize = renderSize
         
         videoComposition.customVideoCompositorClass = Compositor.self
         let handler = MTIAsyncVideoCompositionRequestHandler(context: context, tracks: videoTracks, on: queue, filter: filter)
