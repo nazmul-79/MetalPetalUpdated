@@ -357,19 +357,16 @@ public class MTIVideoComposition {
     /// - If the asset has exactly one video track, the original timing of the source video track will be used. If the asset has more than one video track, and the nominal frame rate of any of video tracks is known, the reciprocal of the greatest known nominalFrameRate will be used as the value of frameDuration. Otherwise, a default framerate of 30fps is used.
     /// - If the specified asset is an instance of AVComposition, the renderSize will be set to the naturalSize of the AVComposition; otherwise the renderSize will be set to a value that encompasses all of the asset's video tracks.
     /// - A renderScale of 1.0.
-    public init(asset inputAsset: AVAsset, context: MTIContext, queue: DispatchQueue?, filter: @escaping (MTIAsyncVideoCompositionRequestHandler.Request) throws -> MTIImage) {
+    public init(asset inputAsset: AVAsset,
+                context: MTIContext,
+                queue: DispatchQueue?,
+                renderSize: CGSize = .zero,
+                filter: @escaping (MTIAsyncVideoCompositionRequestHandler.Request) throws -> MTIImage) {
+       
         asset = inputAsset.copy() as! AVAsset
         videoComposition = AVMutableVideoComposition(propertiesOf: asset)
         let videoTracks = asset.tracks(withMediaType: .video)
-        
-        var renderSize: CGSize = .zero
-        for videoTrack in videoTracks {
-            let size = videoTrack.naturalSize.applying(videoTrack.preferredTransform)
-            renderSize.width = max(renderSize.width, abs(size.width))
-            renderSize.height = max(renderSize.height, abs(size.height))
-        }
         videoComposition.renderSize = renderSize
-        
         videoComposition.customVideoCompositorClass = Compositor.self
         let handler = MTIAsyncVideoCompositionRequestHandler(context: context, tracks: videoTracks, on: queue, filter: filter)
         videoComposition.instructions = [Compositor.Instruction(handler: handler.handle(request:), timeRange: CMTimeRange(start: .zero, duration: CMTime(value: CMTimeValue.max, timescale: 48000)))]
